@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Horā Lagna</title>
+<script src="https://cdn.jsdelivr.net/npm/astronomy-engine@2.1.19/astronomy.browser.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Mukta:wght@400;500;600;700&family=Tiro+Devanagari+Sanskrit:ital@0;1&display=swap" rel="stylesheet">
+<style>
+:root{
+  --night:#121a3c;       /* pre-dawn sky */
+  --lapis:#1c2757;       /* panels */
+  --lapis-2:#243170;
+  --line:#34427f;
+  --ivory:#f1e8d4;
+  --muted:#a8b0d2;
+  --saffron:#f2a33a;     /* Horā Lagna */
+  --tulsi:#6cc19a;       /* Kubera HL */
+  --sky:#93b7ff;         /* Gaṇeśa HL */
+  --kumkum:#e0584a;      /* Sun */
+  --serif:"Tiro Devanagari Sanskrit", "Noto Serif", Georgia, serif;
+  --sans:"Mukta", "Segoe UI", system-ui, -apple-system, sans-serif;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+}
+*,*::before,*::after{box-sizing:inherit}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{
+  margin:0; background:var(--night); color:var(--ivory);
+  font-family:var(--sans); font-size:16px; line-height:1.55;
+  background-image:
+    radial-gradient(1px 1px at 12% 18%, #ffffff55 50%, transparent 51%),
+    radial-gradient(1px 1px at 72% 9%, #ffffff44 50%, transparent 51%),
+    radial-gradient(1px 1px at 88% 32%, #ffffff33 50%, transparent 51%),
+    radial-gradient(1px 1px at 35% 6%, #ffffff44 50%, transparent 51%),
+    radial-gradient(1px 1px at 55% 24%, #ffffff33 50%, transparent 51%);
+  background-repeat:no-repeat;
+}
+.wrap{max-width:1080px;margin:0 auto;padding:0 20px 64px}
+
+/* ---------- Dawn header: sunrise is the zero point of Horā ---------- */
+header.dawn{
+  position:relative; padding:56px 0 44px; overflow:hidden;
+  background:linear-gradient(180deg, var(--night) 0%, #1f2658 45%, #5a3a5e 78%, #c9713a 97%, var(--saffron) 100%);
+  border-bottom:2px solid var(--saffron);
+}
+header.dawn::after{ /* the rising sun on the horizon */
+  content:""; position:absolute; left:50%; bottom:-70px; width:150px; height:150px; margin-left:-75px;
+  border-radius:50%; background:radial-gradient(circle, #ffd27a 0%, var(--saffron) 55%, #f2a33a00 72%);
+}
+.dawn-inner{max-width:1080px;margin:0 auto;padding:0 20px;position:relative;z-index:1}
+.deva{font-family:var(--serif);font-size:1.35rem;color:var(--saffron);margin:0}
+h1{font-family:var(--serif);font-weight:400;font-size:clamp(2.6rem,6vw,4.2rem);line-height:1.05;margin:4px 0 10px}
+.lede{max-width:60ch;color:#dfd6c4;margin:0}
+.verse{font-family:var(--serif);font-style:italic;color:#e8c89a;font-size:.98rem;margin:18px 0 0;max-width:62ch}
+
+h2{font-family:var(--serif);font-weight:400;font-size:1.6rem;margin:0 0 14px}
+h3{font-family:var(--serif);font-weight:400;font-size:1.2rem;margin:0 0 10px}
+
+.panel{background:var(--lapis);border:1px solid var(--line);border-radius:6px;padding:22px}
+
+/* ---------- Form ---------- */
+form.birth{margin-top:-18px;position:relative;z-index:2;display:grid;gap:14px;
+  grid-template-columns:repeat(auto-fit,minmax(160px,1fr))}
+@media (min-width:760px){.field.wide{grid-column:span 2}}
+.field label{display:block;font-size:.8rem;color:var(--muted);margin-bottom:4px}
+.field input,.field select{
+  width:100%;background:var(--night);color:var(--ivory);border:1px solid var(--line);
+  border-radius:4px;padding:9px 10px;font:inherit;font-size:.95rem;color-scheme:dark}
+.field input:focus-visible,.field select:focus-visible,button:focus-visible{outline:2px solid var(--saffron);outline-offset:2px}
+.latlng{display:flex;gap:6px}
+.city{position:relative}
+#searchResults{position:absolute;left:0;right:0;top:100%;margin-top:4px;background:var(--lapis-2);border:1px solid var(--line);
+  border-radius:4px;max-height:200px;overflow-y:auto;z-index:30}
+#searchResults div{padding:8px 10px;cursor:pointer;font-size:.9rem;border-bottom:1px solid var(--line)}
+#searchResults div:hover{background:var(--line)}
+.form-foot{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:14px;align-items:flex-end;justify-content:space-between}
+.form-foot .field{min-width:240px}
+button.go{background:var(--saffron);color:#2a1605;border:0;border-radius:4px;padding:11px 26px;font:inherit;font-weight:700;cursor:pointer}
+button.go:hover{background:#ffb654}
+.hidden{display:none!important}
+#errorBox{margin-top:14px;background:#4a1d24;border:1px solid var(--kumkum);color:#ffd6d0;padding:10px 14px;border-radius:4px}
+
+/* ---------- Hero: dial + three lagnas ---------- */
+.hero{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:28px;align-items:center;margin:40px 0 28px}
+@media (max-width:820px){.hero{grid-template-columns:1fr}}
+.dial-wrap{margin:0}
+#dial{width:100%;max-width:470px;height:auto;display:block;margin:0 auto}
+.dial-wrap figcaption{text-align:center;color:var(--muted);font-size:.85rem;margin-top:6px}
+.hand{transform-origin:220px 220px;transform-box:view-box;transition:transform 1.6s cubic-bezier(.3,.7,.2,1)}
+.hand-label{opacity:0;transition:opacity .5s ease 1.4s}
+.dial-ready .hand-label{opacity:1}
+@media (prefers-reduced-motion:reduce){.hand,.hand-label{transition:none}}
+
+.lagna{border-left:4px solid var(--c);padding:10px 0 12px 18px;margin-bottom:18px}
+.lagna .name{font-family:var(--serif);font-size:1.25rem;color:var(--c)}
+.lagna .name small{font-family:var(--sans);font-size:.8rem;color:var(--muted);margin-left:8px}
+.lagna .val{font-family:var(--serif);font-size:clamp(1.7rem,3.4vw,2.3rem);line-height:1.15}
+.lagna .meta{color:var(--muted);font-size:.88rem}
+.lagna .formula{color:#e1d8c5;font-size:.92rem}
+.c-hl{--c:var(--saffron)} .c-khl{--c:var(--tulsi)} .c-ghl{--c:var(--sky)}
+
+/* ---------- Steps (a real sequence) ---------- */
+ol.steps{list-style:none;counter-reset:s;margin:0;padding:0;display:grid;gap:10px}
+ol.steps li{counter-increment:s;display:grid;grid-template-columns:34px 1fr;gap:10px;align-items:baseline;
+  padding:10px 0;border-bottom:1px dashed var(--line)}
+ol.steps li::before{content:counter(s);font-family:var(--serif);color:var(--saffron);font-size:1.3rem;text-align:center}
+ol.steps li:last-child{border-bottom:0}
+ol.steps .k{color:var(--muted);font-size:.85rem;display:block}
+ol.steps .v{font-size:1.02rem}
+.ok{color:var(--tulsi)} .rev{color:var(--kumkum)}
+
+/* ---------- Chart ---------- */
+.pair{margin-top:24px}
+.south{display:grid;grid-template-columns:repeat(4,1fr);grid-template-rows:repeat(4,1fr);aspect-ratio:1;
+  border:1px solid var(--saffron);max-width:440px;margin:0 auto}
+.cell{border:1px solid var(--line);position:relative;padding:18px 3px 3px;display:flex;flex-wrap:wrap;
+  align-content:flex-start;justify-content:center;gap:2px 6px;min-width:0}
+.cell .sg{position:absolute;top:2px;left:5px;font-size:.66rem;color:var(--muted)}
+.cell.lagna-cell{background:#f2a33a14}
+.center{grid-column:2/4;grid-row:2/4;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;
+  border:1px solid var(--line);background:var(--night)}
+.center .deva{font-size:1.1rem}
+.center small{color:var(--muted);font-size:.78rem}
+.pl{display:flex;flex-direction:column;align-items:center;line-height:1.05}
+.pl b{font-size:.86rem;font-weight:600}
+.pl i{font-style:normal;font-size:.62rem;color:var(--muted)}
+.pl.as b{color:var(--kumkum)} .pl.hl b{color:var(--saffron)} .pl.khl b{color:var(--tulsi)} .pl.ghl b{color:var(--sky)}
+.legend{display:flex;flex-wrap:wrap;gap:14px;justify-content:center;margin-top:12px;font-size:.85rem;color:var(--muted)}
+.legend b{font-weight:700}
+
+
+/* ---------- Report ---------- */
+.report{margin-top:24px}
+.report-head{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:10px}
+.copy{background:transparent;color:var(--saffron);border:1px solid var(--saffron);border-radius:4px;padding:6px 14px;font:inherit;font-size:.85rem;cursor:pointer}
+.report pre{white-space:pre-wrap;overflow-x:auto;margin:0;font-family:ui-monospace,"SF Mono",Consolas,monospace;font-size:.85rem;color:#e7dfcc;line-height:1.6}
+</style>
+</head>
+<body>
+
+<header class="dawn">
+  <div class="dawn-inner">
+    <p class="deva">होरा लग्न</p>
+    <h1>Horā Lagna</h1>
+    <p class="lede">The ascendant that rises one sign every hour, reckoned from sunrise. Computed here with its Kubera and Gaṇeśa variants.</p>
+    <p class="verse">tathā sārdhadvighaṭikāmitādarkodayād dvija | prayāti lagnaṁ tannāma horālagnaṁ pracakṣate ||</p>
+  </div>
+</header>
+
+<div class="wrap">
+  <form class="birth panel" id="birthForm" autocomplete="off">
+    <div class="field"><label for="inputName">Name</label><input id="inputName" value="Kātyā (Example)"></div>
+    <div class="field city"><label for="searchCity">Search city</label><input id="searchCity" placeholder="Type city name…"><div id="searchResults" class="hidden"></div></div>
+    <div class="field"><label for="inputDate">Date</label><input type="date" id="inputDate" value="1984-08-19"></div>
+    <div class="field"><label for="inputTime">Time (local)</label><input type="time" id="inputTime" step="1" value="06:30:00"></div>
+    <div class="field"><label for="inputTz">Timezone (hrs)</label><input type="number" id="inputTz" step="0.5" value="5.5"></div>
+    <div class="field wide"><label for="inputLat">Latitude / Longitude</label>
+      <div class="latlng"><input type="number" id="inputLat" step="any" value="28.6139" aria-label="Latitude"><input type="number" id="inputLon" step="any" value="77.2090" aria-label="Longitude"></div></div>
+    <div class="form-foot">
+      <div class="field"><label for="inputSunRef">Sun longitude taken at</label>
+        <select id="inputSunRef">
+          <option value="sunrise" selected>Sunrise (BPHS: audayike sūrye)</option>
+          <option value="birth">Birth moment</option>
+        </select></div>
+      <button type="submit" class="go">Cast the Horā</button>
+    </div>
+  </form>
+  <div id="errorBox" class="hidden" role="alert"></div>
+
+  <main id="resultsArea" class="hidden">
+    <section class="hero">
+      <figure class="dial-wrap">
+        <svg id="dial" viewBox="0 0 440 440" role="img" aria-label="Horā dial showing the Sun, Lagna and the three Horā Lagnas"></svg>
+        <figcaption>Each hand starts where it is reckoned from and sweeps 1° for every 2 minutes since sunrise.</figcaption>
+      </figure>
+      <div id="lagnaTiles"></div>
+    </section>
+
+    <section class="panel">
+      <h2>How it was reckoned</h2>
+      <ol class="steps" id="steps"></ol>
+    </section>
+
+    <div class="pair">
+      <section class="panel">
+        <h2>Rāśi chart</h2>
+        <div class="south" id="southChart">
+          <div class="cell" id="rasi-11"></div><div class="cell" id="rasi-0"></div><div class="cell" id="rasi-1"></div><div class="cell" id="rasi-2"></div>
+          <div class="cell" id="rasi-10"></div>
+          <div class="center"><span class="deva">राशि</span><small id="chartName"></small></div>
+          <div class="cell" id="rasi-3"></div>
+          <div class="cell" id="rasi-9"></div><div class="cell" id="rasi-4"></div>
+          <div class="cell" id="rasi-8"></div><div class="cell" id="rasi-7"></div><div class="cell" id="rasi-6"></div><div class="cell" id="rasi-5"></div>
+        </div>
+        <div class="legend">
+          <span><b style="color:var(--kumkum)">As</b> Lagna</span>
+          <span><b style="color:var(--saffron)">HL</b> Horā</span>
+          <span><b style="color:var(--tulsi)">KHL</b> Kubera</span>
+          <span><b style="color:var(--sky)">GHL</b> Gaṇeśa</span>
+        </div>
+      </section>
+
+    </div>
+
+    <section class="panel report">
+      <div class="report-head"><h2 style="margin:0">Report</h2><button class="copy" id="copyBtn" type="button">Copy report</button></div>
+      <pre id="textReportContent"></pre>
+    </section>
+  </main>
+</div>
+
+<script>
+const planetLabels = { Sun:"Su", Moon:"Mo", Mars:"Ma", Mercury:"Me", Jupiter:"Jp", Venus:"Ve", Saturn:"Sa", Rahu:"Ra", Ketu:"Ke", Asc:"As" };
+const signNames = ['Aries','Taurus','Gemini','Cancer','Leo','Virgo','Libra','Scorpio','Sagittarius','Capricorn','Aquarius','Pisces'];
+const signShort = ['Ar','Ta','Ge','Cn','Le','Vi','Li','Sc','Sg','Cp','Aq','Pi'];
+const norm360 = x => ((x % 360) + 360) % 360;
+const ord = n => n + (['th','st','nd','rd'][(n%100-20)%10] || ['th','st','nd','rd'][n%100] || 'th');
+
+function showError(msg){const e=document.getElementById('errorBox');e.textContent=msg;e.classList.remove('hidden');}
+function hideError(){document.getElementById('errorBox').classList.add('hidden');}
+
+function formatDeg(deg){const d=Math.floor(deg);const m=Math.floor((deg-d)*60);return `${d}°${String(m).padStart(2,'0')}'`;}
+function formatDMS(deg){let t=Math.round(deg*3600);const d=Math.floor(t/3600);t-=d*3600;const m=Math.floor(t/60);const s=t-m*60;
+  return `${d}°${String(m).padStart(2,'0')}'${String(s).padStart(2,'0')}"`;}
+function formatSignLon(lon){lon=norm360(lon);const r=Math.floor(lon/30);return `${signShort[r]} ${formatDMS(lon-r*30)}`;}
+function formatDisplayDate(d){return `${String(d.getUTCDate()).padStart(2,'0')}-${String(d.getUTCMonth()+1).padStart(2,'0')}-${d.getUTCFullYear()}`;}
+function formatDisplayDateTime(d){let h=d.getUTCHours();const m=String(d.getUTCMinutes()).padStart(2,'0');const ap=h>=12?'PM':'AM';h=h%12||12;
+  return `${formatDisplayDate(d)} ${h}:${m} ${ap}`;}
+
+function getLahiriAyanamsa(date){const j2000=new Date(Date.UTC(2000,0,1,12,0,0));const c=(date.getTime()-j2000.getTime())/86400000/36525;
+  return 23.853056+(c*(5029.0966/3600));}
+function getRahuLongitude(date,ayanamsa){const j2000=new Date(Date.UTC(2000,0,1,12,0,0));const T=(date.getTime()-j2000.getTime())/86400000/36525;
+  return norm360(125.04452-1934.136261*T-ayanamsa);}
+function getAscendant(date,lat,lon,ayanamsa){
+  if(Math.abs(lat)===90)lat=lat>0?89.99:-89.99;
+  const time=new Astronomy.AstroTime(date);
+  const lst=norm360(Astronomy.SiderealTime(time)*15+lon);
+  const T=(time.ut-2451545.0)/36525.0;const eps=23.439291-0.013004*T;const rad=Math.PI/180;
+  const y=Math.cos(lst*rad);const x=-(Math.sin(lst*rad)*Math.cos(eps*rad)+Math.tan(lat*rad)*Math.sin(eps*rad));
+  const asc=norm360(norm360(Math.atan2(y,x)/rad)-ayanamsa);
+  return {rasi:Math.floor(asc/30),degree:asc%30};
+}
+function siderealSunLon(dateObj){const aya=getLahiriAyanamsa(dateObj);const t=new Astronomy.AstroTime(dateObj);
+  return norm360(Astronomy.Ecliptic(Astronomy.GeoVector(Astronomy.Body.Sun,t,true)).elon-aya);}
+
+
+// Sunrise that opens the Vedic day of birth (born before sunrise → previous day's sunrise)
+function findSunriseBefore(dateObj,lat,lon,tzOffset){
+  const observer=new Astronomy.Observer(lat,lon,0);
+  const local=new Date(dateObj.getTime()+tzOffset*3600000);local.setUTCHours(0,0,0,0);
+  const midnightUtc=local.getTime()-tzOffset*3600000;
+  for(let back=0;back<3;back++){
+    const rise=Astronomy.SearchRiseSet(Astronomy.Body.Sun,observer,+1,new Date(midnightUtc-back*86400000),1);
+    if(rise&&rise.date.getTime()<=dateObj.getTime())return rise.date;
+  }
+  throw new Error("Could not find sunrise before birth (polar latitude?)");
+}
+
+function computeHoraLagnas(mins,sunLon,ascLon){
+  const travel=mins/2, travelMod=norm360(travel);
+  const sunSign=Math.floor(sunLon/30);
+  const kuberaForward=[0,1,2,6,7,8].includes(sunSign); // Ar Ta Ge Li Sc Sg
+  return {travel,travelMod,sunSign,kuberaForward,
+    hl:norm360(sunLon+travel),
+    khl:kuberaForward?norm360(sunLon+travel):norm360(sunLon-travel),
+    ghl:kuberaForward?norm360(ascLon+travel):norm360(ascLon-travel)}; // Gaṇeśa: Lagna base, Sun-sign direction
+}
+
+// ---------------- Horā dial (SVG) ----------------
+function drawDial(H,sunLon,ascLon,btLabel){
+  const svg=document.getElementById('dial');const C=220;const NS='http://www.w3.org/2000/svg';
+  const pt=(deg,r)=>[C+r*Math.sin(deg*Math.PI/180),C-r*Math.cos(deg*Math.PI/180)];
+  const arc=(from,span,r)=>{ // span>0 clockwise, <0 counter-clockwise
+    if(Math.abs(span)<0.01)return '';
+    if(Math.abs(span)>=359.99)span=span>0?359.99:-359.99;
+    const [x1,y1]=pt(from,r),[x2,y2]=pt(from+span,r);
+    return `M${x1.toFixed(2)},${y1.toFixed(2)} A${r},${r} 0 ${Math.abs(span)>180?1:0} ${span>0?1:0} ${x2.toFixed(2)},${y2.toFixed(2)}`;
+  };
+  let s=`<circle cx="${C}" cy="${C}" r="200" fill="#1c2757" stroke="#f2a33a" stroke-width="1.5"/>
+         <circle cx="${C}" cy="${C}" r="172" fill="none" stroke="#34427f"/>
+         <circle cx="${C}" cy="${C}" r="62" fill="#121a3c" stroke="#34427f"/>`;
+  for(let i=0;i<12;i++){
+    const [x1,y1]=pt(i*30,62),[x2,y2]=pt(i*30,200);
+    s+=`<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="#34427f"/>`;
+    const [tx,ty]=pt(i*30+15,189);
+    s+=`<text x="${tx}" y="${ty}" fill="#a8b0d2" font-size="12" text-anchor="middle" dominant-baseline="middle" font-family="Mukta,sans-serif">${signShort[i]}</text>`;
+  }
+  const lagnaSign=Math.floor(ascLon/30);
+  s=`<path d="${arc(lagnaSign*30,30,188)}" stroke="#e0584a33" stroke-width="32" fill="none"/>`+s;
+  // travel arcs
+  const kSpan=H.kuberaForward?H.travelMod:-H.travelMod;
+  s+=`<path d="${arc(sunLon,H.travelMod,158)}" stroke="#f2a33a" stroke-width="3" fill="none" stroke-linecap="round"/>`;
+  s+=`<path d="${arc(sunLon,kSpan,146)}" stroke="#6cc19a" stroke-width="3" fill="none" stroke-dasharray="6 5" stroke-linecap="round"/>`;
+  s+=`<path d="${arc(ascLon,kSpan,134)}" stroke="#93b7ff" stroke-width="3" fill="none" stroke-linecap="round"/>`;
+  // origin markers
+  const [sx,sy]=pt(sunLon,172),[ax,ay]=pt(ascLon,172);
+  s+=`<circle cx="${sx}" cy="${sy}" r="7" fill="#e0584a" stroke="#ffd27a" stroke-width="2"><title>Sun ${formatSignLon(sunLon)}</title></circle>`;
+  s+=`<circle cx="${ax}" cy="${ay}" r="6" fill="#121a3c" stroke="#e0584a" stroke-width="2.5"><title>Lagna ${formatSignLon(ascLon)}</title></circle>`;
+  const gap=((ascLon-sunLon+540)%360)-180; const nudge=Math.abs(gap)<9?(gap>=0?9-gap:-(9+gap)):0;
+  const [slx,sly]=pt(sunLon-nudge/2,214),[alx,aly]=pt(ascLon+nudge/2,214);
+  s+=`<text x="${slx}" y="${sly}" fill="#e0584a" font-size="12" font-weight="700" text-anchor="middle" dominant-baseline="middle">Su</text>`;
+  s+=`<text x="${alx}" y="${aly}" fill="#e0584a" font-size="12" font-weight="700" text-anchor="middle" dominant-baseline="middle">As</text>`;
+  // hands (start at their origin, rotate to final)
+  const hands=[
+    {id:'hl',col:'#f2a33a',len:150,w:5,start:sunLon,end:sunLon+H.travelMod,lbl:'HL',at:H.hl},
+    {id:'khl',col:'#6cc19a',len:138,w:3,start:sunLon,end:sunLon+kSpan,lbl:'KHL',at:H.khl},
+    {id:'ghl',col:'#93b7ff',len:126,w:3,start:ascLon,end:ascLon+kSpan,lbl:'GHL',at:H.ghl}
+  ];
+  hands.forEach(h=>{
+    s+=`<g class="hand" data-end="${h.end}" style="transform:rotate(${h.start}deg)">
+          <line x1="${C}" y1="${C}" x2="${C}" y2="${C-h.len}" stroke="${h.col}" stroke-width="${h.w}" stroke-linecap="round"/>
+          <circle cx="${C}" cy="${C-h.len}" r="4.5" fill="${h.col}"/></g>`;
+  });
+  hands.forEach((h,i)=>{
+    const [lx,ly]=pt(h.at,h.len-20-i*2);
+    s+=`<text class="hand-label" x="${lx}" y="${ly}" fill="${h.col}" font-size="12" font-weight="700" text-anchor="middle" dominant-baseline="middle"
+          paint-order="stroke" stroke="#1c2757" stroke-width="4">${h.lbl}</text>`;
+  });
+  s+=`<circle cx="${C}" cy="${C}" r="8" fill="#f2a33a"/>`;
+  s+=`<text x="${C}" y="${C-24}" fill="#a8b0d2" font-size="11" text-anchor="middle">since sunrise</text>
+      <text x="${C}" y="${C+30}" fill="#f1e8d4" font-size="15" text-anchor="middle" font-family="'Tiro Devanagari Sanskrit',serif">${btLabel}</text>`;
+  svg.innerHTML=s;
+  svg.parentElement.classList.remove('dial-ready');
+  requestAnimationFrame(()=>requestAnimationFrame(()=>{
+    svg.querySelectorAll('.hand').forEach(g=>g.style.transform=`rotate(${g.dataset.end}deg)`);
+    svg.parentElement.classList.add('dial-ready');
+  }));
+}
+
+function generate(){
+  hideError();
+  try{
+    const dateStr=document.getElementById('inputDate').value;
+    const timeStr=document.getElementById('inputTime').value;
+    const tzOffset=parseFloat(document.getElementById('inputTz').value);
+    const lat=parseFloat(document.getElementById('inputLat').value);
+    const lon=parseFloat(document.getElementById('inputLon').value);
+    if(!dateStr||!timeStr||isNaN(tzOffset)||isNaN(lat)||isNaN(lon))throw new Error("Please fill out all the fields correctly.");
+
+    const [year,month,day]=dateStr.split('-').map(Number);
+    const [hours,minutes,seconds]=timeStr.split(':').map(Number);
+    const dateObj=new Date(Date.UTC(year,month-1,day,hours,minutes,seconds||0)-tzOffset*3600000);
+    const time=new Astronomy.AstroTime(dateObj);
+    const ayanamsa=getLahiriAyanamsa(dateObj);
+
+    const getPlanetPos=p=>{const e=Astronomy.Ecliptic(Astronomy.GeoVector(Astronomy.Body[p],time,true));const l=norm360(e.elon-ayanamsa);
+      return {rasi:Math.floor(l/30),degree:l%30};};
+    const rahuLon=getRahuLongitude(dateObj,ayanamsa);const ketuLon=norm360(rahuLon+180);
+    const planets={Sun:getPlanetPos('Sun'),Moon:getPlanetPos('Moon'),Mars:getPlanetPos('Mars'),Mercury:getPlanetPos('Mercury'),
+      Jupiter:getPlanetPos('Jupiter'),Venus:getPlanetPos('Venus'),Saturn:getPlanetPos('Saturn'),
+      Rahu:{rasi:Math.floor(rahuLon/30),degree:rahuLon%30},Ketu:{rasi:Math.floor(ketuLon/30),degree:ketuLon%30},
+      Asc:getAscendant(dateObj,lat,lon,ayanamsa)};
+
+    // ---- Horā Lagna ----
+    const sunriseAbs=findSunriseBefore(dateObj,lat,lon,tzOffset);
+    const sunriseLocal=new Date(sunriseAbs.getTime()+tzOffset*3600000);
+    const mins=(dateObj.getTime()-sunriseAbs.getTime())/60000;
+    const sunRef=document.getElementById('inputSunRef').value;
+    const sunLon=sunRef==='sunrise'?siderealSunLon(sunriseAbs):planets.Sun.rasi*30+planets.Sun.degree;
+    const ascLon=planets.Asc.rasi*30+planets.Asc.degree;
+    const H=computeHoraLagnas(mins,sunLon,ascLon);
+    const hh=Math.floor(mins/60),mm=Math.floor(mins%60);
+    const btStr=`${hh}h ${String(mm).padStart(2,'0')}m`;
+    const sunLabel=sunRef==='sunrise'?'Sun at sunrise':'Sun at birth';
+    const houseFromAsc=L=>((Math.floor(L/30)-planets.Asc.rasi+12)%12)+1;
+
+    drawDial(H,sunLon,ascLon,btStr);
+
+    const tile=(cls,name,sub,L,formula)=>`
+      <div class="lagna ${cls}">
+        <div class="name">${name}<small>${sub}</small></div>
+        <div class="val">${signNames[Math.floor(L/30)]} ${formatDMS(L%30)}</div>
+        <div class="formula">${formula}</div>
+        <div class="meta">${ord(houseFromAsc(L))} house from Lagna, absolute ${formatDMS(L)}</div>
+      </div>`;
+    document.getElementById('lagnaTiles').innerHTML=
+      tile('c-hl','Horā Lagna','HL',H.hl,'Sun + BT ÷ 2')+
+      tile('c-khl','Kubera Horā Lagna','KHL',H.khl,H.kuberaForward?'Sun + BT ÷ 2, Sun in a forward sign':'Sun − BT ÷ 2, Sun in a reverse sign')+
+      tile('c-ghl','Gaṇeśa Horā Lagna','GHL',H.ghl,H.kuberaForward?'Lagna + BT ÷ 2, Sun in a forward sign':'Lagna − BT ÷ 2, Sun in a reverse sign');
+
+    const laps=Math.floor(H.travel/360);
+    const step=(k,v)=>`<li><div><span class="k">${k}</span><span class="v">${v}</span></div></li>`;
+    document.getElementById('steps').innerHTML=
+      step('Sunrise at the birth place',formatDisplayDateTime(sunriseLocal))+
+      step('Birth time from sunrise (BT)',`${btStr} = ${mins.toFixed(2)} minutes`)+
+      step('Distance travelled: BT ÷ 2, since 2 minutes = 1°',`${formatDMS(H.travel)}${laps?` → remove ${laps*360}° (${laps} full circle${laps>1?'s':''}) = ${formatDMS(H.travelMod)}`:''}`)+
+      step(sunLabel,`${formatSignLon(sunLon)} (${formatDMS(sunLon)})`)+
+      step('Natal Lagna',`${formatSignLon(ascLon)} (${formatDMS(ascLon)})`)+
+      step('Kubera and Gaṇeśa direction (by Sun sign)',`Sun in ${signNames[H.sunSign]} → ${H.kuberaForward?'<span class="ok">forward: add</span> (Ar, Ta, Ge, Li, Sc, Sg)':'<span class="rev">reverse: subtract</span> (Cn, Le, Vi, Cp, Aq, Pi)'}`)+
+      step('Results',`HL ${formatSignLon(H.hl)}, KHL ${formatSignLon(H.khl)}, GHL ${formatSignLon(H.ghl)}`);
+
+    // ---- South Indian chart ----
+    const contents=Array(12).fill().map(()=>[]);
+    Object.keys(planets).forEach(p=>{
+      contents[planets[p].rasi].push(`<span class="pl ${p==='Asc'?'as':''}"><b>${planetLabels[p]}</b><i>${formatDeg(planets[p].degree)}</i></span>`);
+    });
+    [['HL',H.hl,'hl'],['KHL',H.khl,'khl'],['GHL',H.ghl,'ghl']].forEach(([l,L,c])=>{
+      contents[Math.floor(L/30)].push(`<span class="pl ${c}"><b>${l}</b><i>${formatDeg(L%30)}</i></span>`);
+    });
+    for(let r=0;r<12;r++){
+      const cell=document.getElementById(`rasi-${r}`);
+      cell.innerHTML=`<span class="sg">${signShort[r]}</span>`+contents[r].join('');
+      cell.classList.toggle('lagna-cell',r===planets.Asc.rasi);
+    }
+    const personName=document.getElementById('inputName').value.trim();
+    document.getElementById('chartName').textContent=personName;
+
+
+    // ---- Text report ----
+    const pad=(s,n=24)=>(s+' '.repeat(n)).slice(0,n);
+    let t=`${personName}\n`;
+    t+=`=================================================\nHORĀ LAGNA (1 SIGN PER HOUR FROM SUNRISE)\n=================================================\n`;
+    t+=`${pad('Sunrise')}: ${formatDisplayDateTime(sunriseLocal)}\n`;
+    t+=`${pad('Birth time from sunrise')}: ${btStr} (${mins.toFixed(2)} min)\n`;
+    t+=`${pad('BT / 2')}: ${formatDMS(H.travel)}${laps?` = ${formatDMS(H.travelMod)} after removing full circles`:''}\n`;
+    t+=`${pad(sunLabel)}: ${formatSignLon(sunLon)}\n`;
+    t+=`${pad('Natal Lagna')}: ${formatSignLon(ascLon)}\n\n`;
+    t+=`${pad('Horā Lagna (HL)')}: ${formatSignLon(H.hl)}  [Sun + BT/2]\n`;
+    t+=`${pad('Kubera HL (KHL)')}: ${formatSignLon(H.khl)}  [Sun ${H.kuberaForward?'+':'-'} BT/2, Sun in ${signNames[H.sunSign]}]\n`;
+    t+=`${pad('Gaṇeśa HL (GHL)')}: ${formatSignLon(H.ghl)}  [Lagna ${H.kuberaForward?'+':'-'} BT/2, Sun in ${signNames[H.sunSign]}]\n`;
+    document.getElementById('textReportContent').textContent=t.trim();
+
+    document.getElementById('resultsArea').classList.remove('hidden');
+  }catch(err){showError("Error computing the chart: "+err.message);console.error(err);}
+}
+
+window.addEventListener('load',()=>{
+  document.getElementById('birthForm').addEventListener('submit',e=>{e.preventDefault();generate();});
+
+  const searchInput=document.getElementById('searchCity');const results=document.getElementById('searchResults');let timer;
+  searchInput.addEventListener('input',e=>{
+    const q=e.target.value;clearTimeout(timer);
+    if(q.length<3){results.innerHTML='';results.classList.add('hidden');return;}
+    timer=setTimeout(async()=>{
+      try{
+        const res=await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(q)}&count=5&language=en&format=json`);
+        const data=await res.json();if(!data.results)return;
+        results.innerHTML='';
+        data.results.forEach(city=>{
+          const div=document.createElement('div');
+          div.textContent=[city.name,city.admin1,city.country].filter(Boolean).join(', ');
+          div.onclick=()=>{
+            document.getElementById('inputLat').value=city.latitude;
+            document.getElementById('inputLon').value=city.longitude;
+            searchInput.value=city.name;results.classList.add('hidden');
+            if(city.timezone){try{
+              const dv=document.getElementById('inputDate').value||new Date().toISOString().split('T')[0];
+              const s=new Date(dv).toLocaleString('en-US',{timeZone:city.timezone,timeZoneName:'longOffset'});
+              const m=s.match(/GMT([+-]\d{2}):?(\d{2})?/);
+              if(m){const h=parseInt(m[1]);const mi=m[2]?parseInt(m[2])/60:0;document.getElementById('inputTz').value=h+(h>=0?mi:-mi);}
+            }catch(e){console.warn('TZ calculation failed',e);}}
+          };
+          results.appendChild(div);
+        });
+        results.classList.remove('hidden');
+      }catch(err){console.error("Search API error",err);}
+    },500);
+  });
+  document.addEventListener('click',e=>{if(!searchInput.contains(e.target)&&!results.contains(e.target))results.classList.add('hidden');});
+
+  document.getElementById('copyBtn').addEventListener('click',async()=>{
+    const btn=document.getElementById('copyBtn');const text=document.getElementById('textReportContent').textContent;
+    try{await navigator.clipboard.writeText(text);}catch(e){
+      const ta=document.createElement('textarea');ta.value=text;document.body.appendChild(ta);ta.select();document.execCommand('copy');ta.remove();}
+    btn.textContent='Copied';setTimeout(()=>btn.textContent='Copy report',2000);
+  });
+
+  generate();
+});
+</script>
+</body>
+</html>
